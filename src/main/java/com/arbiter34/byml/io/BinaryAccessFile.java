@@ -17,11 +17,12 @@ public class BinaryAccessFile  extends RandomAccessFile {
     }
 
     public void writeUnsignedInt(long v) throws IOException {
-        int u = (int)v;
-        write((u >>> 24) & 0xFF);
-        write((u >>> 16) & 0xFF);
-        write((u >>>  8) & 0xFF);
-        write((u) & 0xFF);
+        byte[] bytes = new byte[4];
+        bytes[0] = (byte)(v >>> 24);
+        bytes[1] = (byte)(v >>> 16);
+        bytes[2] = (byte)(v >>> 8);
+        bytes[3] = (byte)(v);
+        write(bytes);
     }
 
     public long readUnsignedInt() throws IOException {
@@ -31,6 +32,7 @@ public class BinaryAccessFile  extends RandomAccessFile {
         int ch4 = read();
         if ((ch1 | ch2 | ch3 | ch4) < 0)
             throw new EOFException();
-        return ((ch1 << 24) + (ch2 << 16) + (ch3 << 8) + (ch4));
+        long ret = ((ch1 << 24) + (ch2 << 16) + (ch3 << 8) + (ch4));
+        return (ret << 32) >>> 32;
     }
 }

@@ -1,6 +1,7 @@
 package com.arbiter34.byml.nodes;
 
 import com.arbiter34.byml.io.BinaryAccessFile;
+import com.arbiter34.byml.util.NodeUtil;
 import com.arbiter34.byml.util.StringUtil;
 
 import java.io.IOException;
@@ -52,19 +53,24 @@ public class StringTableNode implements Node {
         return new StringTableNode(offset, numEntries, entryOffsets, entries);
     }
 
-    public void write(final BinaryAccessFile outputStream) throws IOException {
-        final long typeAndNumEntries = NODE_TYPE & (numEntries & 0x0FFF);
-        outputStream.writeUnsignedInt(typeAndNumEntries);
+    public void write(final BinaryAccessFile file) throws IOException {
+        byte[] bytes = new byte[4];
+        bytes[0] = (byte)NODE_TYPE;
+        bytes[1] = (byte)(numEntries >>> 16);
+        bytes[2] = (byte)(numEntries >>> 8);
+        bytes[3] = (byte)(numEntries);
+        file.write(bytes);
         long currentOffset = 0x04;               // 1 byte for type, 3 bytes for number entries
         for (int i = 0; i < numEntries; i++) {
-            outputStream.writeUnsignedInt(currentOffset);
-            byte[] bytes = StringUtil.stringToAscii(entries.get(i));
+            file.writeUnsignedInt(currentOffset);
+            bytes = StringUtil.stringToAscii(entries.get(i));
             currentOffset += bytes.length;
         }
-        outputStream.writeUnsignedInt(currentOffset);
+        file.writeUnsignedInt(currentOffset);
         for (int i = 0; i < numEntries; i++) {
-            outputStream.write(StringUtil.stringToAscii(entries.get(i)));
+            file.write(StringUtil.stringToAscii(entries.get(i)));
         }
+        NodeUtil.byteAlign(file, true);
     }
 
     public long getOffset() {
@@ -81,5 +87,10 @@ public class StringTableNode implements Node {
 
     public List<String> getEntries() {
         return entries;
+    }
+
+    @Override
+    public short getNodeType() {
+        return NODE_TYPE;
     }
 }

@@ -1,5 +1,8 @@
 package com.arbiter34.byml.nodes;
 
+import com.arbiter34.byml.io.BinaryAccessFile;
+
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class FloatNode implements Node {
@@ -22,5 +25,15 @@ public class FloatNode implements Node {
         buffer[0] = (byte)((value & 0x00F0) >>> 8);
         buffer[0] = (byte)((value & 0x000F));
         return new FloatNode(ByteBuffer.wrap(buffer).getFloat());
+    }
+
+    public void write(final BinaryAccessFile file) throws IOException {
+        int bits = Float.floatToIntBits(value);
+        file.writeUnsignedInt(bits);
+    }
+
+    @Override
+    public short getNodeType() {
+        return NODE_TYPE;
     }
 }
