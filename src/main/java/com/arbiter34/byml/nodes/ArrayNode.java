@@ -68,7 +68,7 @@ public class ArrayNode implements Node {
                 NodeUtil.writeNode(nodeNameTable, stringValueTable, file, node);
             }
         }
-        NodeUtil.byteAlign(file, true);
+        file.seek(arrayEnd);
     }
 
     public int getNumEntries() {

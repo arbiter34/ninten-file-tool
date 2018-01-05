@@ -69,6 +69,7 @@ public class DictionaryNode implements Node {
                 NodeUtil.writeNode(nodeNameTable, stringValueTable, file, node);
             }
         }
+        file.seek(dictionaryEnd);
     }
 
     @Override
