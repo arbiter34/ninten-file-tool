@@ -6,19 +6,19 @@ import com.arbiter34.byml.util.NodeUtil;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-public class ArrayNode implements Node {
+public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
     public static final short NODE_TYPE = 0xC0;
     private static final int BYTE_ALIGNMENT = 4;
 
     private final int numEntries;
     private final int[] nodeTypes;
-    private final List<? extends Node> nodes;
 
-    private ArrayNode(final int numEntries, final int[] nodeTypes, final List<? extends Node> nodes) {
+    private ArrayNode(final int numEntries, final int[] nodeTypes) {
+        super(numEntries);
         this.numEntries = numEntries;
         this.nodeTypes = nodeTypes;
-        this.nodes = nodes;
     }
 
     public static ArrayNode parse(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
@@ -35,12 +35,12 @@ public class ArrayNode implements Node {
             nodeTypes[i] = file.readUnsignedByte();
         }
         NodeUtil.byteAlign(file, false);
-        final List<Node> nodes = new ArrayList<>();
+        final ArrayNode instance = new ArrayNode(numEntries, nodeTypes);
         for (int i = 0; i < numEntries; i++) {
             final long value = file.readUnsignedInt();
-            nodes.add(NodeUtil.parseNode(nodeNameTable, stringValueTable, file, (short)nodeTypes[i], value));
+            instance.add(NodeUtil.parseNode(nodeNameTable, stringValueTable, file, (short)nodeTypes[i], value));
         }
-        return new ArrayNode(numEntries, nodeTypes, nodes);
+        return instance;
     }
 
     public void write(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
@@ -56,7 +56,7 @@ public class ArrayNode implements Node {
         }
         NodeUtil.byteAlign(file, true);
         long arrayEnd = file.getFilePointer() + (4 * numEntries);
-        for (final Node node : nodes) {
+        for (final Node node : this) {
             if (node instanceof ArrayNode || node instanceof  DictionaryNode) {
                 file.writeUnsignedInt(arrayEnd);
                 long lastPosition = file.getFilePointer();
@@ -79,12 +79,24 @@ public class ArrayNode implements Node {
         return nodeTypes;
     }
 
-    public List<? extends Node> getNodes() {
-        return nodes;
-    }
-
     @Override
     public short getNodeType() {
         return NODE_TYPE;
+    }
+
+    @Override
+    public boolean eq(List<Node> nodes) {
+        return this.equals(nodes);
+    }
+
+    @Override
+    public void setValue(List<Node> nodes) {
+        this.clear();
+        Optional.ofNullable(nodes).ifPresent(this::addAll);
+    }
+
+    @Override
+    public List<Node> getValue() {
+        return this;
     }
 }

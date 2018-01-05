@@ -9,7 +9,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
-public class StringTableNode implements Node {
+public class StringTableNode {
     private static final short NODE_TYPE = 0xC2;
 
     private final long offset;
@@ -60,13 +60,13 @@ public class StringTableNode implements Node {
         bytes[2] = (byte)(numEntries >>> 8);
         bytes[3] = (byte)(numEntries);
         file.write(bytes);
-        long currentOffset = 0x04;               // 1 byte for type, 3 bytes for number entries
+        long endOfOffsets = 0x04 + (4 * numEntries); // type/numEntries + 4bytes/offset
         for (int i = 0; i < numEntries; i++) {
-            file.writeUnsignedInt(currentOffset);
+            file.writeUnsignedInt(endOfOffsets);
             bytes = StringUtil.stringToAscii(entries.get(i));
-            currentOffset += bytes.length;
+            endOfOffsets += bytes.length;
         }
-        file.writeUnsignedInt(currentOffset);
+        file.writeUnsignedInt(endOfOffsets);
         for (int i = 0; i < numEntries; i++) {
             file.write(StringUtil.stringToAscii(entries.get(i)));
         }
@@ -87,10 +87,5 @@ public class StringTableNode implements Node {
 
     public List<String> getEntries() {
         return entries;
-    }
-
-    @Override
-    public short getNodeType() {
-        return NODE_TYPE;
     }
 }

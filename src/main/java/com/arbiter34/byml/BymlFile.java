@@ -27,6 +27,10 @@ public class BymlFile {
         this.pathTable = pathTable;
     }
 
+   public Node getRoot() {
+        return root;
+   }
+
     public static BymlFile parse(final String path) throws IOException {
         final BinaryAccessFile file = new BinaryAccessFile(path, "r");
         final Header header = Header.parse(file);

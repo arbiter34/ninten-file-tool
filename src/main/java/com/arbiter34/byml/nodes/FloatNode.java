@@ -4,11 +4,12 @@ import com.arbiter34.byml.io.BinaryAccessFile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Optional;
 
-public class FloatNode implements Node {
+public class FloatNode implements Node<Float> {
     public static final short NODE_TYPE = 0xD2;
 
-    private final Float value;
+    private Float value;
 
     public FloatNode(Float value) {
         this.value = value;
@@ -32,8 +33,22 @@ public class FloatNode implements Node {
         file.writeUnsignedInt(bits);
     }
 
+    public boolean equals(final Float other) {
+        return value.equals(other);
+    }
+
     @Override
     public short getNodeType() {
         return NODE_TYPE;
+    }
+
+    @Override
+    public boolean eq(Float aFloat) {
+        return aFloat != null && aFloat.equals(value);
+    }
+
+    @Override
+    public void setValue(Float aFloat) {
+        this.value = Optional.ofNullable(aFloat).orElse(null);
     }
 }

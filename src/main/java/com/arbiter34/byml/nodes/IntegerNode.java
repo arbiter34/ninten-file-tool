@@ -3,18 +3,15 @@ package com.arbiter34.byml.nodes;
 import com.arbiter34.byml.io.BinaryAccessFile;
 
 import java.io.IOException;
+import java.util.Optional;
 
-public class IntegerNode implements Node {
+public class IntegerNode implements Node<Integer> {
     public static final short NODE_TYPE = 0xD1;
 
-    private final int value;
+    private int value;
 
     public IntegerNode(int value) {
         this.value = value;
-    }
-
-    public int getValue() {
-        return value;
     }
 
     public static IntegerNode parse(long value) {
@@ -23,6 +20,21 @@ public class IntegerNode implements Node {
 
     public void write(final BinaryAccessFile file) throws IOException {
         file.writeUnsignedInt(value);
+    }
+
+    @Override
+    public boolean eq(final Integer other) {
+        return other != null && other.equals(value);
+    }
+
+    @Override
+    public Integer getValue() {
+        return value;
+    }
+
+    @Override
+    public void setValue(Integer integer) throws UnsupportedOperationException {
+        this.value = Optional.ofNullable(integer).orElse(value);
     }
 
     @Override
