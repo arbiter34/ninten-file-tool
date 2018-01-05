@@ -13,18 +13,17 @@ public class Main {
 
     @SuppressWarnings("unchecked")
     public static void main(String[] args) throws IOException {
-        final BymlFile bymlFile = BymlFile.parse("ActorInfo.product.byml");
-        final Node node = bymlFile.getRoot();
-        if (node instanceof DictionaryNode) {
-            final DictionaryNode dictionaryNode = DictionaryNode.class.cast(node);
-            final ArrayNode arrayNode = ArrayNode.class.cast(dictionaryNode.get("Actors"));
-            final List<DictionaryNode> weapons =  arrayNode.stream()
-                    .map(n -> (DictionaryNode)n)
-                    .filter(d -> d.containsKey("name") &&
-                            d.get("name").eq("Item_Enemy_27"))
-                    .collect(Collectors.toList());
-            weapons.forEach(d -> d.get("itemSellingPrice").setValue(27000));
+        if (args.length != 1) {
+            String jar = new java.io.File(Main.class
+                                                          .getProtectionDomain()
+                                                          .getCodeSource()
+                                                          .getLocation()
+                                                          .getPath())
+                            .getName();
+            System.out.println(String.format("%s file.byml", jar));
+            System.exit(0);
         }
-        bymlFile.write("ActorInfo.product.byml.bak");
+        final BymlFile bymlFile = BymlFile.parse(args[0]);
+        bymlFile.write(args[0] + ".bak");
     }
 }
