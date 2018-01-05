@@ -21,10 +21,10 @@ public class FloatNode implements Node<Float> {
 
     public static FloatNode parse(long value) {
         final byte[] buffer = new byte[4];
-        buffer[0] = (byte)((value & 0xF000) >>> 24);
-        buffer[0] = (byte)((value & 0x0F00) >>> 16);
-        buffer[0] = (byte)((value & 0x00F0) >>> 8);
-        buffer[0] = (byte)((value & 0x000F));
+        buffer[0] = (byte)(value >>> 24);
+        buffer[1] = (byte)(value >>> 16);
+        buffer[2] = (byte)(value >>> 8);
+        buffer[3] = (byte) value;
         return new FloatNode(ByteBuffer.wrap(buffer).getFloat());
     }
 

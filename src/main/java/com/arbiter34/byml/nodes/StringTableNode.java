@@ -60,13 +60,17 @@ public class StringTableNode {
         bytes[2] = (byte)(numEntries >>> 8);
         bytes[3] = (byte)(numEntries);
         file.write(bytes);
-        long endOfOffsets = 0x04 + (4 * numEntries); // type/numEntries + 4bytes/offset
+        long endOfOffsets = 0x04 + (4 * numEntries) + 0x04; // type/numEntries + 4bytes/offset
+        if ((endOfOffsets % 4) != 0) {
+            endOfOffsets += 4 - (endOfOffsets % 4);
+        }
         for (int i = 0; i < numEntries; i++) {
             file.writeUnsignedInt(endOfOffsets);
             bytes = StringUtil.stringToAscii(entries.get(i));
             endOfOffsets += bytes.length;
         }
         file.writeUnsignedInt(endOfOffsets);
+        NodeUtil.byteAlign(file, true);
         for (int i = 0; i < numEntries; i++) {
             file.write(StringUtil.stringToAscii(entries.get(i)));
         }
