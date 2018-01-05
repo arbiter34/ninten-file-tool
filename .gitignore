@@ -2,3 +2,4 @@ target/
 ActorInfo.product.byml
 ActorInfo*
 .idea/
+out/
