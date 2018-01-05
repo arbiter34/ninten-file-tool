@@ -4,16 +4,18 @@ import com.arbiter34.byml.io.BinaryAccessFile;
 import com.arbiter34.byml.util.NodeUtil;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
-public class DictionaryNode implements Node {
+public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<Map<String, Node>> {
     public static final short NODE_TYPE = 0xC1;
 
-    private final Map<String, Node> dictionary;
+    private final int numEntries;
 
-    public DictionaryNode(Map<String, Node> dictionary) {
-        this.dictionary = dictionary;
+    private DictionaryNode(final int numEntries) {
+        super(numEntries);
+        this.numEntries = numEntries;
     }
 
     public static DictionaryNode parse(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
@@ -24,7 +26,7 @@ public class DictionaryNode implements Node {
         }
         final int numEntries = (int)(typeAndNumEntries & 0x00FFFFFF);
 
-        final Map<String, Node> dictionary = new HashMap<>();
+        final DictionaryNode instance = new DictionaryNode(numEntries);
         for (int i = 0; i < numEntries; i++) {
             final long nameIndexAndType = file.readUnsignedInt();
             final int nameIndex = (int)(nameIndexAndType >>> 8);
@@ -32,8 +34,62 @@ public class DictionaryNode implements Node {
             final long value = file.readUnsignedInt();
             final String key = nodeNameTable.getEntries().get(nameIndex);
             final Node node = NodeUtil.parseNode(nodeNameTable, stringValueTable, file, nodeType, value);
-            dictionary.put(key, node);
+            instance.put(key, node);
         }
-        return new DictionaryNode(dictionary);
+        return instance;
+    }
+
+    public void write(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
+                      final BinaryAccessFile file) throws IOException {
+        byte[] bytes = new byte[4];
+        bytes[0] = (byte)NODE_TYPE;
+        bytes[1] = (byte)(numEntries >>> 16);
+        bytes[2] = (byte)(numEntries >>> 8);
+        bytes[3] = (byte)(numEntries);
+        file.write(bytes);
+
+        final long dictionaryStart = file.getFilePointer();
+        long dictionaryEnd = dictionaryStart + (8 * numEntries);
+        for (final String key : keySet()) {
+            final Node node = get(key);
+            final int nameIndex = nodeNameTable.getEntries().indexOf(key);
+            bytes[0] = (byte)(nameIndex >>> 16);
+            bytes[1] = (byte)(nameIndex >>> 8);
+            bytes[2] = (byte)(nameIndex);
+            bytes[3] = (byte)node.getNodeType();
+            file.write(bytes);
+            if (node instanceof ArrayNode || node instanceof DictionaryNode) {
+                file.writeUnsignedInt(dictionaryEnd);
+                long lastPosition = file.getFilePointer();
+                file.seek(dictionaryEnd);
+                NodeUtil.writeNode(nodeNameTable, stringValueTable, file, node);
+                dictionaryEnd = file.getFilePointer();
+                file.seek(lastPosition);
+            } else {
+                NodeUtil.writeNode(nodeNameTable, stringValueTable, file, node);
+            }
+        }
+        file.seek(dictionaryEnd);
+    }
+
+    @Override
+    public short getNodeType() {
+        return NODE_TYPE;
+    }
+
+    @Override
+    public boolean eq(Map<String, Node> stringNodeMap) {
+        return this.equals(stringNodeMap);
+    }
+
+    @Override
+    public void setValue(Map<String, Node> stringNodeMap) {
+        this.clear();
+        Optional.ofNullable(stringNodeMap).ifPresent(this::putAll);
+    }
+
+    @Override
+    public Map<String, Node> getValue() {
+        return this;
     }
 }

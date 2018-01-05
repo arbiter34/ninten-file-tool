@@ -1,6 +1,7 @@
 package com.arbiter34.byml.nodes;
 
 import com.arbiter34.byml.io.BinaryAccessFile;
+import com.arbiter34.byml.util.NodeUtil;
 import com.arbiter34.byml.util.StringUtil;
 
 import java.io.IOException;
@@ -8,7 +9,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
-public class StringTableNode implements Node {
+public class StringTableNode {
     private static final short NODE_TYPE = 0xC2;
 
     private final long offset;
@@ -52,19 +53,28 @@ public class StringTableNode implements Node {
         return new StringTableNode(offset, numEntries, entryOffsets, entries);
     }
 
-    public void write(final BinaryAccessFile outputStream) throws IOException {
-        final long typeAndNumEntries = NODE_TYPE & (numEntries & 0x0FFF);
-        outputStream.writeUnsignedInt(typeAndNumEntries);
-        long currentOffset = 0x04;               // 1 byte for type, 3 bytes for number entries
-        for (int i = 0; i < numEntries; i++) {
-            outputStream.writeUnsignedInt(currentOffset);
-            byte[] bytes = StringUtil.stringToAscii(entries.get(i));
-            currentOffset += bytes.length;
+    public void write(final BinaryAccessFile file) throws IOException {
+        byte[] bytes = new byte[4];
+        bytes[0] = (byte)NODE_TYPE;
+        bytes[1] = (byte)(numEntries >>> 16);
+        bytes[2] = (byte)(numEntries >>> 8);
+        bytes[3] = (byte)(numEntries);
+        file.write(bytes);
+        long endOfOffsets = 0x04 + (4 * numEntries) + 0x04; // type/numEntries + 4bytes/offset
+        if ((endOfOffsets % 4) != 0) {
+            endOfOffsets += 4 - (endOfOffsets % 4);
         }
-        outputStream.writeUnsignedInt(currentOffset);
         for (int i = 0; i < numEntries; i++) {
-            outputStream.write(StringUtil.stringToAscii(entries.get(i)));
+            file.writeUnsignedInt(endOfOffsets);
+            bytes = StringUtil.stringToAscii(entries.get(i));
+            endOfOffsets += bytes.length;
         }
+        file.writeUnsignedInt(endOfOffsets);
+        NodeUtil.byteAlign(file, true);
+        for (int i = 0; i < numEntries; i++) {
+            file.write(StringUtil.stringToAscii(entries.get(i)));
+        }
+        NodeUtil.byteAlign(file, true);
     }
 
     public long getOffset() {

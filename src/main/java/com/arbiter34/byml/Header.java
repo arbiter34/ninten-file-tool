@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Header implements Node {
-    private static final int MAGIC_BYTES = 0x4259;
+public class Header {
+    public static final int MAGIC_BYTES = 0x4259;
     private static final List<Integer> validVersions = Stream.of(0x01, 0x02)
                                                            .collect(Collectors.toList());
 
@@ -20,7 +20,7 @@ public class Header implements Node {
     private final long pathValueTableOffset;
     private final long rootNodeOffset;
 
-    private Header(int magicBytes, int version, long nodeNameTableOffset, long stringValueTableOffset,
+    public Header(int magicBytes, int version, long nodeNameTableOffset, long stringValueTableOffset,
                    long pathValueTableOffset, long rootNodeOffset) {
         this.magicBytes = magicBytes;
         this.version = version;
@@ -61,6 +61,17 @@ public class Header implements Node {
 
     public int getVersion() {
         return version;
+    }
+
+    public int getSize() {
+        switch (version) {
+            case 1:
+                return 20;
+            case 2:
+                return 16;
+            default:
+                throw new UnsupportedOperationException(String.format("Invalid version found. Found: %s Expected: %s", version, validVersions));
+        }
     }
 
     public long getNodeNameTableOffset() {

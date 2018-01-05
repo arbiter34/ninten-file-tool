@@ -12,7 +12,7 @@ import java.io.IOException;
 
 public class BymlFile {
 
-    private final Header header;
+    private Header header;
     private final Node root;
     private final StringTableNode nodeNameTable;
     private final StringTableNode stringNameTable;
@@ -26,6 +26,10 @@ public class BymlFile {
         this.stringNameTable = stringNameTable;
         this.pathTable = pathTable;
     }
+
+   public Node getRoot() {
+        return root;
+   }
 
     public static BymlFile parse(final String path) throws IOException {
         final BinaryAccessFile file = new BinaryAccessFile(path, "r");
@@ -59,5 +63,27 @@ public class BymlFile {
         file.seek(header.getRootNodeOffset());
         final Node root = NodeUtil.parseNode(nodeNameTable, stringNameTable, file, nodeType, 0l);
         return new BymlFile(header, root, nodeNameTable, stringNameTable, pathTable);
+    }
+
+    public void write(final String path) throws IOException {
+        final BinaryAccessFile file = new BinaryAccessFile(path, "rw");
+
+        // We need to calc some offsets before writing the header
+        final long headerSize = header.getSize();
+        final long nodeNameTableOffset = headerSize;
+
+        file.seek(nodeNameTableOffset);
+        nodeNameTable.write(file);
+
+        final long stringNameTableOffset = file.getFilePointer();
+        stringNameTable.write(file);
+
+        final long rootNodeOffset = file.getFilePointer();
+        header = new Header(Header.MAGIC_BYTES, header.getVersion(), nodeNameTableOffset, stringNameTableOffset, 0, rootNodeOffset);
+        file.seek(0);
+        header.write(file);
+
+        file.seek(rootNodeOffset);
+        NodeUtil.writeNode(nodeNameTable, stringNameTable, file, root);
     }
 }
