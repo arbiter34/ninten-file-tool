@@ -2,6 +2,7 @@ package com.arbiter34.byml.nodes;
 
 import com.arbiter34.byml.io.BinaryAccessFile;
 import com.arbiter34.byml.util.NodeUtil;
+import com.fasterxml.jackson.annotation.JsonGetter;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -10,15 +11,8 @@ import java.util.Optional;
 
 public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
     public static final short NODE_TYPE = 0xC0;
-    private static final int BYTE_ALIGNMENT = 4;
 
-    private final int numEntries;
-    private final int[] nodeTypes;
-
-    private ArrayNode(final int numEntries, final int[] nodeTypes) {
-        super(numEntries);
-        this.numEntries = numEntries;
-        this.nodeTypes = nodeTypes;
+    public ArrayNode() {
     }
 
     public static ArrayNode parse(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
@@ -35,7 +29,7 @@ public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
             nodeTypes[i] = file.readUnsignedByte();
         }
         NodeUtil.byteAlign(file, false);
-        final ArrayNode instance = new ArrayNode(numEntries, nodeTypes);
+        final ArrayNode instance = new ArrayNode();
         for (int i = 0; i < numEntries; i++) {
             final long value = file.readUnsignedInt();
             instance.add(NodeUtil.parseNode(nodeNameTable, stringValueTable, file, (short)nodeTypes[i], value));
@@ -45,14 +39,16 @@ public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
 
     public void write(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
                       final BinaryAccessFile file) throws IOException {
+        final int numEntries = this.size();
         byte[] bytes = new byte[4];
         bytes[0] = (byte)NODE_TYPE;
         bytes[1] = (byte)(numEntries >>> 16);
         bytes[2] = (byte)(numEntries >>> 8);
         bytes[3] = (byte)(numEntries);
         file.write(bytes);
-        for (int i = 0; i < nodeTypes.length; i++) {
-            file.writeByte(nodeTypes[i]);
+        for (int i = 0; i < numEntries; i++) {
+            final short nodeType = NodeType.valueOfClazz(this.get(i).getClass()).getNodeType();
+            file.writeByte(nodeType);
         }
         NodeUtil.byteAlign(file, true);
         long arrayEnd = file.getFilePointer() + (4 * numEntries);
@@ -71,15 +67,8 @@ public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
         file.seek(arrayEnd);
     }
 
-    public int getNumEntries() {
-        return numEntries;
-    }
-
-    public int[] getNodeTypes() {
-        return nodeTypes;
-    }
-
     @Override
+    @JsonGetter("nodeType")
     public short getNodeType() {
         return NODE_TYPE;
     }

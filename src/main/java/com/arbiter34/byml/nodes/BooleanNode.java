@@ -1,6 +1,9 @@
 package com.arbiter34.byml.nodes;
 
 import com.arbiter34.byml.io.BinaryAccessFile;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -10,7 +13,8 @@ public class BooleanNode implements Node<Boolean> {
 
     private boolean value;
 
-    public BooleanNode(boolean value) {
+    @JsonCreator()
+    public BooleanNode(@JsonProperty("value") boolean value) {
         this.value = value;
     }
 
@@ -31,6 +35,7 @@ public class BooleanNode implements Node<Boolean> {
     }
 
     @Override
+    @JsonGetter("nodeType")
     public short getNodeType() {
         return NODE_TYPE;
     }

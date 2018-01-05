@@ -1,6 +1,9 @@
 package com.arbiter34.byml.nodes;
 
 import com.arbiter34.byml.io.BinaryAccessFile;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -11,7 +14,8 @@ public class FloatNode implements Node<Float> {
 
     private Float value;
 
-    public FloatNode(Float value) {
+    @JsonCreator
+    public FloatNode(@JsonProperty("value") Float value) {
         this.value = value;
     }
 
@@ -38,6 +42,7 @@ public class FloatNode implements Node<Float> {
     }
 
     @Override
+    @JsonGetter("nodeType")
     public short getNodeType() {
         return NODE_TYPE;
     }

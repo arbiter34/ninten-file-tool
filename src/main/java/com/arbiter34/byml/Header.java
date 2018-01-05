@@ -2,6 +2,9 @@ package com.arbiter34.byml;
 
 import com.arbiter34.byml.io.BinaryAccessFile;
 import com.arbiter34.byml.nodes.Node;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.util.List;
@@ -15,19 +18,37 @@ public class Header {
 
     private final int magicBytes;
     private final int version;
+
+    @JsonIgnore
     private final long nodeNameTableOffset;
+
+    @JsonIgnore
     private final long stringValueTableOffset;
+
+    @JsonIgnore
     private final long pathValueTableOffset;
+
+    @JsonIgnore
     private final long rootNodeOffset;
 
-    public Header(int magicBytes, int version, long nodeNameTableOffset, long stringValueTableOffset,
-                   long pathValueTableOffset, long rootNodeOffset) {
+    public Header(int magicBytes, int version, long nodeNameTableOffset, long stringValueTableOffset, long pathValueTableOffset,
+                  long rootNodeOffset) {
         this.magicBytes = magicBytes;
         this.version = version;
         this.nodeNameTableOffset = nodeNameTableOffset;
         this.stringValueTableOffset = stringValueTableOffset;
         this.pathValueTableOffset = pathValueTableOffset;
         this.rootNodeOffset = rootNodeOffset;
+    }
+
+    @JsonCreator
+    public Header(@JsonProperty("magicBytes") final int magicBytes, @JsonProperty("version") final int version) {
+        this.magicBytes = magicBytes;
+        this.version = version;
+        this.nodeNameTableOffset = 0;
+        this.stringValueTableOffset = 0;
+        this.pathValueTableOffset = 0;
+        this.rootNodeOffset = 0;
     }
 
     public static Header parse(final BinaryAccessFile file) throws IOException {
@@ -63,6 +84,7 @@ public class Header {
         return version;
     }
 
+    @JsonIgnore
     public int getSize() {
         switch (version) {
             case 1:

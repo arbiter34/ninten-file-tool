@@ -2,6 +2,9 @@ package com.arbiter34.byml.nodes;
 
 import com.arbiter34.byml.io.BinaryAccessFile;
 import com.arbiter34.byml.util.NodeUtil;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -11,11 +14,7 @@ import java.util.Optional;
 public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<Map<String, Node>> {
     public static final short NODE_TYPE = 0xC1;
 
-    private final int numEntries;
-
-    private DictionaryNode(final int numEntries) {
-        super(numEntries);
-        this.numEntries = numEntries;
+    public DictionaryNode() {
     }
 
     public static DictionaryNode parse(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
@@ -26,7 +25,7 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
         }
         final int numEntries = (int)(typeAndNumEntries & 0x00FFFFFF);
 
-        final DictionaryNode instance = new DictionaryNode(numEntries);
+        final DictionaryNode instance = new DictionaryNode();
         for (int i = 0; i < numEntries; i++) {
             final long nameIndexAndType = file.readUnsignedInt();
             final int nameIndex = (int)(nameIndexAndType >>> 8);
@@ -41,6 +40,7 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
 
     public void write(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
                       final BinaryAccessFile file) throws IOException {
+        final int numEntries = this.size();
         byte[] bytes = new byte[4];
         bytes[0] = (byte)NODE_TYPE;
         bytes[1] = (byte)(numEntries >>> 16);
@@ -73,6 +73,7 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
     }
 
     @Override
+    @JsonGetter("nodeType")
     public short getNodeType() {
         return NODE_TYPE;
     }

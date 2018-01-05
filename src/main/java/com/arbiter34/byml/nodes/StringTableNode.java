@@ -3,6 +3,8 @@ package com.arbiter34.byml.nodes;
 import com.arbiter34.byml.io.BinaryAccessFile;
 import com.arbiter34.byml.util.NodeUtil;
 import com.arbiter34.byml.util.StringUtil;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -12,15 +14,10 @@ import java.util.List;
 public class StringTableNode {
     private static final short NODE_TYPE = 0xC2;
 
-    private final long offset;
-    private final long numEntries;
-    private final long[] entryOffsets;
     private final List<String> entries;
 
-    public StringTableNode(long offset, long numEntries, long[] entryOffsets, List<String> entries) {
-        this.offset = offset;
-        this.numEntries = numEntries;
-        this.entryOffsets = entryOffsets;
+    @JsonCreator
+    public StringTableNode(@JsonProperty("entries") List<String> entries) {
         this.entries = entries;
     }
 
@@ -50,10 +47,11 @@ public class StringTableNode {
             entries.add(new String(buffer, 0, length -1, Charset.defaultCharset()));
         }
 
-        return new StringTableNode(offset, numEntries, entryOffsets, entries);
+        return new StringTableNode(entries);
     }
 
     public void write(final BinaryAccessFile file) throws IOException {
+        final int numEntries = entries.size();
         byte[] bytes = new byte[4];
         bytes[0] = (byte)NODE_TYPE;
         bytes[1] = (byte)(numEntries >>> 16);
@@ -75,18 +73,6 @@ public class StringTableNode {
             file.write(StringUtil.stringToAscii(entries.get(i)));
         }
         NodeUtil.byteAlign(file, true);
-    }
-
-    public long getOffset() {
-        return offset;
-    }
-
-    public long getNumEntries() {
-        return numEntries;
-    }
-
-    public long[] getEntryOffsets() {
-        return entryOffsets;
     }
 
     public List<String> getEntries() {
