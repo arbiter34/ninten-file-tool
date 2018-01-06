@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import java.util.Optional;
 
 public class FloatNode implements Node<Float> {
@@ -21,6 +22,20 @@ public class FloatNode implements Node<Float> {
 
     public Float getValue() {
         return value;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FloatNode floatNode = (FloatNode) o;
+        return Objects.equals(value, floatNode.value);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(value);
     }
 
     public static FloatNode parse(long value) {

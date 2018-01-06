@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Optional;
 
 public class HashNode implements Node<Long> {
@@ -49,5 +50,19 @@ public class HashNode implements Node<Long> {
     @Override
     public Long getValue() {
         return value;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        HashNode hashNode = (HashNode) o;
+        return value == hashNode.value;
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(value);
     }
 }

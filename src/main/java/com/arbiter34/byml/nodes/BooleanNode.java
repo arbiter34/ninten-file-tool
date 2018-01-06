@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Optional;
 
 public class BooleanNode implements Node<Boolean> {
@@ -53,5 +54,19 @@ public class BooleanNode implements Node<Boolean> {
     @Override
     public Boolean getValue() {
         return value;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BooleanNode that = (BooleanNode) o;
+        return value == that.value;
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(value);
     }
 }

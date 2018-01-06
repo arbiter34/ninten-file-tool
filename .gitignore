@@ -3,3 +3,6 @@ ActorInfo.product.byml
 ActorInfo*
 .idea/
 out/
+*.jar
+*mubin
+*byml

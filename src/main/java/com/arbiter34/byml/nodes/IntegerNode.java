@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Optional;
 
 public class IntegerNode implements Node<Integer> {
@@ -45,5 +46,19 @@ public class IntegerNode implements Node<Integer> {
     @JsonGetter("nodeType")
     public short getNodeType() {
         return NODE_TYPE;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        IntegerNode that = (IntegerNode) o;
+        return value == that.value;
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(value);
     }
 }

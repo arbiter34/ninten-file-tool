@@ -12,7 +12,7 @@ import com.arbiter34.byml.nodes.StringNode;
 import com.arbiter34.byml.nodes.StringTableNode;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.util.List;
 
 public class NodeUtil {
     public static final int BYTE_ALIGNMENT = 4;
@@ -59,14 +59,15 @@ public class NodeUtil {
         }
     }
 
-    public static void writeNode(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
-                                  final BinaryAccessFile file, final Node node) throws IOException {
+    public static void writeNode(final List<Pair<Long, Node>> nodeCache, final StringTableNode nodeNameTable,
+                                 final StringTableNode stringValueTable,
+                                 final BinaryAccessFile file, final Node node) throws IOException {
         if (node instanceof ArrayNode) {
-            ArrayNode.class.cast(node).write(nodeNameTable, stringValueTable, file);
+            ArrayNode.class.cast(node).write(nodeCache, nodeNameTable, stringValueTable, file);
         } else if (node instanceof BooleanNode) {
             BooleanNode.class.cast(node).write(file);
         } else if (node instanceof  DictionaryNode) {
-            DictionaryNode.class.cast(node).write(nodeNameTable, stringValueTable, file);
+            DictionaryNode.class.cast(node).write(nodeCache, nodeNameTable, stringValueTable, file);
         } else if (node instanceof FloatNode) {
             FloatNode.class.cast(node).write(file);
         } else if (node instanceof HashNode) {
@@ -90,5 +91,9 @@ public class NodeUtil {
                 file.skipBytes(fromAlignment);
             }
         }
+    }
+
+    public static List<Node> sortForPadding(long offset, final List<Node> nodes) {
+        return nodes;
     }
 }

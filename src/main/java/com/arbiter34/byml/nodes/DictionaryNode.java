@@ -2,20 +2,21 @@ package com.arbiter34.byml.nodes;
 
 import com.arbiter34.byml.io.BinaryAccessFile;
 import com.arbiter34.byml.util.NodeUtil;
+import com.arbiter34.byml.util.Pair;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<Map<String, Node>> {
     public static final short NODE_TYPE = 0xC1;
 
-    public DictionaryNode() {
-    }
+    private Long size;
+
+    private static int count = 0;
 
     public static DictionaryNode parse(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
                                        final BinaryAccessFile file) throws IOException {
@@ -38,8 +39,10 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
         return instance;
     }
 
-    public void write(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
-                      final BinaryAccessFile file) throws IOException {
+    public void write(final List<Pair<Long, Node>> nodeCache, final StringTableNode nodeNameTable,
+                      final StringTableNode stringValueTable, final BinaryAccessFile file) throws IOException {
+        final List<Node> nodeCacheList = nodeCache.stream().map(Pair::getRight).collect(Collectors.toList());
+
         final int numEntries = this.size();
         byte[] bytes = new byte[4];
         bytes[0] = (byte)NODE_TYPE;
@@ -48,8 +51,9 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
         bytes[3] = (byte)(numEntries);
         file.write(bytes);
 
-        final long dictionaryStart = file.getFilePointer();
-        long dictionaryEnd = dictionaryStart + (8 * numEntries);
+        final long headerStart = file.getFilePointer();
+        long headerEnd = headerStart + (8 * numEntries);
+
         for (final String key : keySet()) {
             final Node node = get(key);
             final int nameIndex = nodeNameTable.getEntries().indexOf(key);
@@ -59,17 +63,23 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
             bytes[3] = (byte)node.getNodeType();
             file.write(bytes);
             if (node instanceof ArrayNode || node instanceof DictionaryNode) {
-                file.writeUnsignedInt(dictionaryEnd);
-                long lastPosition = file.getFilePointer();
-                file.seek(dictionaryEnd);
-                NodeUtil.writeNode(nodeNameTable, stringValueTable, file, node);
-                dictionaryEnd = file.getFilePointer();
-                file.seek(lastPosition);
+                if (nodeCacheList.contains(node)) {
+                    file.writeUnsignedInt(nodeCache.get(nodeCacheList.indexOf(node)).getLeft());
+                } else {
+                    final long offset = headerEnd;
+                    file.writeUnsignedInt(offset);
+                    long lastPosition = file.getFilePointer();
+                    file.seek(headerEnd);
+                    NodeUtil.writeNode(nodeCache, nodeNameTable, stringValueTable, file, node);
+                    headerEnd = file.getFilePointer();
+                    file.seek(lastPosition);
+                    nodeCache.add(Pair.of(offset, node));
+                }
             } else {
-                NodeUtil.writeNode(nodeNameTable, stringValueTable, file, node);
+                NodeUtil.writeNode(nodeCache, nodeNameTable, stringValueTable, file, node);
             }
         }
-        file.seek(dictionaryEnd);
+        file.seek(headerEnd);
     }
 
     @Override
@@ -92,5 +102,27 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
     @Override
     public Map<String, Node> getValue() {
         return this;
+    }
+
+    @Override
+    public long getSize() {
+        if (size == null) {
+            size = 4 + (8 * size()) + values().stream()
+                    .map(Node::getSize)
+                    .reduce((a, b) -> a + b).orElse(0L);
+            if ((size % 4) != 0) {
+                size += 4 - (size % 4);
+            }
+        }
+        return size;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DictionaryNode that = (DictionaryNode)o;
+        if (that.size() != size()) return false;
+        return entrySet().stream().allMatch(that.entrySet()::contains);
     }
 }

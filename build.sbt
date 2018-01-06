@@ -1,5 +1,5 @@
 name := "byml-editor"
-version := "1.0-SNAPSHOT"
+version := "0.2"
 
 lazy val `byml-editor` = (project in file("."))
   .settings(crossPaths := false)

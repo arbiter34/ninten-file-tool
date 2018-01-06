@@ -2,18 +2,22 @@ package com.arbiter34.byml.nodes;
 
 import com.arbiter34.byml.io.BinaryAccessFile;
 import com.arbiter34.byml.util.NodeUtil;
+import com.arbiter34.byml.util.Pair;
 import com.fasterxml.jackson.annotation.JsonGetter;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
     public static final short NODE_TYPE = 0xC0;
 
-    public ArrayNode() {
-    }
+    private Long size;
+
+    private static int count = 0;
 
     public static ArrayNode parse(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
                                   final BinaryAccessFile file) throws IOException {
@@ -37,8 +41,9 @@ public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
         return instance;
     }
 
-    public void write(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
-                      final BinaryAccessFile file) throws IOException {
+    public void write(final List<Pair<Long, Node>> nodeCache, final StringTableNode nodeNameTable,
+                      final StringTableNode stringValueTable, final BinaryAccessFile file) throws IOException {
+        final List<Node> nodeCacheList = nodeCache.stream().map(Pair::getRight).collect(Collectors.toList());
         final int numEntries = this.size();
         byte[] bytes = new byte[4];
         bytes[0] = (byte)NODE_TYPE;
@@ -51,20 +56,26 @@ public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
             file.writeByte(nodeType);
         }
         NodeUtil.byteAlign(file, true);
-        long arrayEnd = file.getFilePointer() + (4 * numEntries);
+        long headerEnd = file.getFilePointer() + (4 * numEntries);
         for (final Node node : this) {
             if (node instanceof ArrayNode || node instanceof  DictionaryNode) {
-                file.writeUnsignedInt(arrayEnd);
-                long lastPosition = file.getFilePointer();
-                file.seek(arrayEnd);
-                NodeUtil.writeNode(nodeNameTable, stringValueTable, file, node);
-                arrayEnd = file.getFilePointer();
-                file.seek(lastPosition);
+                if (nodeCacheList.contains(node)) {
+                    file.writeUnsignedInt(nodeCache.get(nodeCacheList.indexOf(node)).getLeft());
+                } else {
+                    final long offset = headerEnd;
+                    file.writeUnsignedInt(offset);
+                    long lastPosition = file.getFilePointer();
+                    file.seek(headerEnd);
+                    NodeUtil.writeNode(nodeCache, nodeNameTable, stringValueTable, file, node);
+                    headerEnd = file.getFilePointer();
+                    file.seek(lastPosition);
+                    nodeCache.add(Pair.of(offset, node));
+                }
             } else {
-                NodeUtil.writeNode(nodeNameTable, stringValueTable, file, node);
+                NodeUtil.writeNode(nodeCache, nodeNameTable, stringValueTable, file, node);
             }
         }
-        file.seek(arrayEnd);
+        file.seek(headerEnd);
     }
 
     @Override
@@ -87,5 +98,25 @@ public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
     @Override
     public List<Node> getValue() {
         return this;
+    }
+
+    @Override
+    public long getSize() {
+        if (size == null) {
+            size = 4 + size() + (4 * size()) + stream().map(Node::getSize).reduce((a, b) -> a + b).orElse(0L);
+            if ((size % 4) != 0) {
+                size += 4 - (size % 4);
+            }
+        }
+        return size;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ArrayNode that = (ArrayNode) o;
+        if (that.size() != size()) return false;
+        return stream().allMatch(that::contains);
     }
 }

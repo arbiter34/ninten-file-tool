@@ -29,4 +29,12 @@ public interface Node<T> {
      * @return
      */
     T getValue();
+
+    /**
+     * Get size of node with all children
+     * @return
+     */
+    default long getSize() {
+        return 0;
+    }
 }

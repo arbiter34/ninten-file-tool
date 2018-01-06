@@ -8,6 +8,7 @@ import com.arbiter34.byml.nodes.PathTableNode;
 import com.arbiter34.byml.nodes.StringNode;
 import com.arbiter34.byml.nodes.StringTableNode;
 import com.arbiter34.byml.util.NodeUtil;
+import com.arbiter34.byml.util.Pair;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -17,9 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class BymlFile {
@@ -114,11 +113,33 @@ public class BymlFile {
         header.write(file);
 
         file.seek(rootNodeOffset);
-        NodeUtil.writeNode(nodeNameTable, stringNameTable, file, root);
+
+        final List<Pair<Long, Node>> nodeCache = new ArrayList<>();
+        NodeUtil.writeNode(nodeCache, nodeNameTable, stringNameTable, file, root);
     }
 
     public String toJson() throws JsonProcessingException {
         return objectMapper.writeValueAsString(this);
+    }
+
+    public int countType(Class<? extends Node> clazz) {
+        return countType(root, clazz);
+    }
+
+    private int countType(Node root, Class<? extends Node> clazz) {
+        int total = 0;
+        if (root.getClass().equals(clazz)) {
+            total += 1;
+        } else if (root.getClass().equals(DictionaryNode.class)) {
+            for (Node node : DictionaryNode.class.cast(root).values()) {
+                total += countType(node, clazz);
+            }
+        } else if (root.getClass().equals(ArrayNode.class)) {
+            for (Node node : ArrayNode.class.cast(root)) {
+                total += countType(node, clazz);
+            }
+        }
+        return total;
     }
 
     private static List<String> buildStringValueTable(final List<String> names, Node root) {
