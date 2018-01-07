@@ -1,7 +1,7 @@
 name := "byml-tools"
 
 lazy val baseSettings = Seq(
-  version := "0.2",
+  version := "0.4",
   organization := "com.arbiter34",
   autoScalaLibrary := false,
   crossPaths := false,

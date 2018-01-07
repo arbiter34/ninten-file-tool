@@ -18,7 +18,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class BymlFile {
@@ -114,16 +117,37 @@ public class BymlFile {
 
         file.seek(rootNodeOffset);
 
-        final List<Pair<Long, Node>> nodeCache = new ArrayList<>();
+        final Map<Node, Pair<Long, List<Long>>> nodeCache = buildNodeCache(root, new HashMap<>());
         NodeUtil.writeNode(nodeCache, nodeNameTable, stringNameTable, file, root);
+        writeNodeCacheOffsets(file, nodeCache);
     }
 
     public String toJson() throws JsonProcessingException {
         return objectMapper.writeValueAsString(this);
     }
 
-    public int countType(Class<? extends Node> clazz) {
-        return countType(root, clazz);
+    private void writeNodeCacheOffsets(final BinaryAccessFile file, final Map<Node, Pair<Long, List<Long>>> nodeCache) throws IOException {
+        for (final Pair<Long, List<Long>> offSetPair : nodeCache.values()) {
+            for (final Long headerOffset : offSetPair.getRight()) {
+                file.seek(headerOffset);
+                file.writeUnsignedInt(offSetPair.getLeft());
+            }
+        }
+    }
+
+    private Map<Node,Pair<Long,List<Long>>> buildNodeCache(Node root, Map<Node, Pair<Long, List<Long>>> nodeCache) {
+        if (root instanceof ArrayNode) {
+            nodeCache.put(root, Pair.of(null, new ArrayList<>()));
+            for (final Node node : (ArrayNode)root) {
+                buildNodeCache(node, nodeCache);
+            }
+        } else if (root instanceof DictionaryNode) {
+            nodeCache.put(root, Pair.of(null, new ArrayList<>()));
+            for (final Node node : ((DictionaryNode)root).values()) {
+                buildNodeCache(node, nodeCache);
+            }
+        }
+        return nodeCache;
     }
 
     private int countType(Node root, Class<? extends Node> clazz) {

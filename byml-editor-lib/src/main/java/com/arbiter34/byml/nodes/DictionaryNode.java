@@ -8,7 +8,11 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<Map<String, Node>> {
@@ -39,9 +43,8 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
         return instance;
     }
 
-    public void write(final List<Pair<Long, Node>> nodeCache, final StringTableNode nodeNameTable,
+    public void write(final Map<Node, Pair<Long, List<Long>>> nodeCache, final StringTableNode nodeNameTable,
                       final StringTableNode stringValueTable, final BinaryAccessFile file) throws IOException {
-        final List<Node> nodeCacheList = nodeCache.stream().map(Pair::getRight).collect(Collectors.toList());
 
         final int numEntries = this.size();
         byte[] bytes = new byte[4];
@@ -62,18 +65,21 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
             bytes[2] = (byte)(nameIndex);
             bytes[3] = (byte)node.getNodeType();
             file.write(bytes);
+            final List<Node> children = new ArrayList<>(values());
             if (node instanceof ArrayNode || node instanceof DictionaryNode) {
-                if (nodeCacheList.contains(node)) {
-                    file.writeUnsignedInt(nodeCache.get(nodeCacheList.indexOf(node)).getLeft());
+                final List<Node> restOfSiblings = new ArrayList<>(values()).subList(children.indexOf(node)+1, children.size());
+                if (nodeCache.get(node).getLeft() != null || restOfSiblings.stream().anyMatch(n -> n.contains(node))) {
+                    nodeCache.get(node).getRight().add(file.getFilePointer());
+                    file.write(new byte[4]);
                 } else {
                     final long offset = headerEnd;
+                    nodeCache.get(node).setLeft(offset);
                     file.writeUnsignedInt(offset);
                     long lastPosition = file.getFilePointer();
                     file.seek(headerEnd);
                     NodeUtil.writeNode(nodeCache, nodeNameTable, stringValueTable, file, node);
                     headerEnd = file.getFilePointer();
                     file.seek(lastPosition);
-                    nodeCache.add(Pair.of(offset, node));
                 }
             } else {
                 NodeUtil.writeNode(nodeCache, nodeNameTable, stringValueTable, file, node);
@@ -124,5 +130,10 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
         DictionaryNode that = (DictionaryNode)o;
         if (that.size() != size()) return false;
         return entrySet().stream().allMatch(that.entrySet()::contains);
+    }
+
+    @Override
+    public boolean contains(Node node) {
+        return values().stream().anyMatch(n -> n.contains(node));
     }
 }

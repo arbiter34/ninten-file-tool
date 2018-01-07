@@ -6,10 +6,11 @@ import com.arbiter34.byml.util.Pair;
 import com.fasterxml.jackson.annotation.JsonGetter;
 
 import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
@@ -41,9 +42,8 @@ public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
         return instance;
     }
 
-    public void write(final List<Pair<Long, Node>> nodeCache, final StringTableNode nodeNameTable,
+    public void write(final Map<Node, Pair<Long, List<Long>>> nodeCache, final StringTableNode nodeNameTable,
                       final StringTableNode stringValueTable, final BinaryAccessFile file) throws IOException {
-        final List<Node> nodeCacheList = nodeCache.stream().map(Pair::getRight).collect(Collectors.toList());
         final int numEntries = this.size();
         byte[] bytes = new byte[4];
         bytes[0] = (byte)NODE_TYPE;
@@ -59,17 +59,19 @@ public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
         long headerEnd = file.getFilePointer() + (4 * numEntries);
         for (final Node node : this) {
             if (node instanceof ArrayNode || node instanceof  DictionaryNode) {
-                if (nodeCacheList.contains(node)) {
-                    file.writeUnsignedInt(nodeCache.get(nodeCacheList.indexOf(node)).getLeft());
+                final List<Node> restOfSiblings = subList(indexOf(node)+1, size());
+                if (nodeCache.get(node).getLeft() != null || restOfSiblings.stream().anyMatch(n -> n.contains(node))) {
+                    nodeCache.get(node).getRight().add(file.getFilePointer());
+                    file.write(new byte[4]);
                 } else {
                     final long offset = headerEnd;
+                    nodeCache.get(node).setLeft(offset);
                     file.writeUnsignedInt(offset);
                     long lastPosition = file.getFilePointer();
                     file.seek(headerEnd);
                     NodeUtil.writeNode(nodeCache, nodeNameTable, stringValueTable, file, node);
                     headerEnd = file.getFilePointer();
                     file.seek(lastPosition);
-                    nodeCache.add(Pair.of(offset, node));
                 }
             } else {
                 NodeUtil.writeNode(nodeCache, nodeNameTable, stringValueTable, file, node);
@@ -118,5 +120,10 @@ public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
         ArrayNode that = (ArrayNode) o;
         if (that.size() != size()) return false;
         return stream().allMatch(that::contains);
+    }
+
+    @Override
+    public boolean contains(Node node) {
+        return stream().anyMatch(n -> n.contains(node));
     }
 }

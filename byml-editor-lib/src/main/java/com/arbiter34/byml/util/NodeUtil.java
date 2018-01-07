@@ -12,7 +12,9 @@ import com.arbiter34.byml.nodes.StringNode;
 import com.arbiter34.byml.nodes.StringTableNode;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class NodeUtil {
     public static final int BYTE_ALIGNMENT = 4;
@@ -59,7 +61,7 @@ public class NodeUtil {
         }
     }
 
-    public static void writeNode(final List<Pair<Long, Node>> nodeCache, final StringTableNode nodeNameTable,
+    public static void writeNode(final Map<Node, Pair<Long, List<Long>>> nodeCache, final StringTableNode nodeNameTable,
                                  final StringTableNode stringValueTable,
                                  final BinaryAccessFile file, final Node node) throws IOException {
         if (node instanceof ArrayNode) {

@@ -37,4 +37,8 @@ public interface Node<T> {
     default long getSize() {
         return 0;
     }
+
+    default boolean contains(final Node node) {
+        return false;
+    }
 }
