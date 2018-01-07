@@ -25,14 +25,6 @@ public class FloatNode implements Node<Float> {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        FloatNode floatNode = (FloatNode) o;
-        return Objects.equals(value, floatNode.value);
-    }
-
-    @Override
     public int hashCode() {
 
         return Objects.hash(value);
@@ -52,8 +44,12 @@ public class FloatNode implements Node<Float> {
         file.writeUnsignedInt(bits);
     }
 
-    public boolean equals(final Float other) {
-        return value.equals(other);
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FloatNode that = (FloatNode) o;
+        return that.getValue() != null && Float.floatToIntBits(that.value) == Float.floatToIntBits(value);
     }
 
     @Override

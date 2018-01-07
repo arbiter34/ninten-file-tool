@@ -19,10 +19,11 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class BymlFile {
     private static final ObjectMapper objectMapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)
@@ -117,7 +118,7 @@ public class BymlFile {
 
         file.seek(rootNodeOffset);
 
-        final Map<Node, Pair<Long, List<Long>>> nodeCache = buildNodeCache(root, new HashMap<>());
+        final Map<Node, Pair<Long, List<Long>>> nodeCache = buildNodeCache(root, new LinkedHashMap<>());
         NodeUtil.writeNode(nodeCache, nodeNameTable, stringNameTable, file, root);
         writeNodeCacheOffsets(file, nodeCache);
     }
@@ -136,12 +137,12 @@ public class BymlFile {
     }
 
     private Map<Node,Pair<Long,List<Long>>> buildNodeCache(Node root, Map<Node, Pair<Long, List<Long>>> nodeCache) {
-        if (root instanceof ArrayNode) {
+        if (root instanceof ArrayNode && !nodeCache.containsKey(root)) {
             nodeCache.put(root, Pair.of(null, new ArrayList<>()));
             for (final Node node : (ArrayNode)root) {
                 buildNodeCache(node, nodeCache);
             }
-        } else if (root instanceof DictionaryNode) {
+        } else if (root instanceof DictionaryNode && !nodeCache.containsKey(root)) {
             nodeCache.put(root, Pair.of(null, new ArrayList<>()));
             for (final Node node : ((DictionaryNode)root).values()) {
                 buildNodeCache(node, nodeCache);
@@ -150,17 +151,18 @@ public class BymlFile {
         return nodeCache;
     }
 
-    private int countType(Node root, Class<? extends Node> clazz) {
+    public int countType(Node root, Class<? extends Node> ... classes) {
         int total = 0;
-        if (root.getClass().equals(clazz)) {
+        if (Stream.of(classes).anyMatch(clazz -> clazz.equals(root.getClass()))) {
             total += 1;
-        } else if (root.getClass().equals(DictionaryNode.class)) {
+        }
+        if (root.getClass().equals(DictionaryNode.class)) {
             for (Node node : DictionaryNode.class.cast(root).values()) {
-                total += countType(node, clazz);
+                total += countType(node, classes);
             }
         } else if (root.getClass().equals(ArrayNode.class)) {
             for (Node node : ArrayNode.class.cast(root)) {
-                total += countType(node, clazz);
+                total += countType(node, classes);
             }
         }
         return total;

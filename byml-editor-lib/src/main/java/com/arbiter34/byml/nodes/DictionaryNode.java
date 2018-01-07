@@ -3,17 +3,13 @@ package com.arbiter34.byml.nodes;
 import com.arbiter34.byml.io.BinaryAccessFile;
 import com.arbiter34.byml.util.NodeUtil;
 import com.arbiter34.byml.util.Pair;
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<Map<String, Node>> {
     public static final short NODE_TYPE = 0xC1;
@@ -54,9 +50,6 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
         bytes[3] = (byte)(numEntries);
         file.write(bytes);
 
-        final long headerStart = file.getFilePointer();
-        long headerEnd = headerStart + (8 * numEntries);
-
         for (final String key : keySet()) {
             final Node node = get(key);
             final int nameIndex = nodeNameTable.getEntries().indexOf(key);
@@ -65,27 +58,21 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
             bytes[2] = (byte)(nameIndex);
             bytes[3] = (byte)node.getNodeType();
             file.write(bytes);
-            final List<Node> children = new ArrayList<>(values());
             if (node instanceof ArrayNode || node instanceof DictionaryNode) {
-                final List<Node> restOfSiblings = new ArrayList<>(values()).subList(children.indexOf(node)+1, children.size());
-                if (nodeCache.get(node).getLeft() != null || restOfSiblings.stream().anyMatch(n -> n.contains(node))) {
-                    nodeCache.get(node).getRight().add(file.getFilePointer());
-                    file.write(new byte[4]);
-                } else {
-                    final long offset = headerEnd;
-                    nodeCache.get(node).setLeft(offset);
-                    file.writeUnsignedInt(offset);
-                    long lastPosition = file.getFilePointer();
-                    file.seek(headerEnd);
-                    NodeUtil.writeNode(nodeCache, nodeNameTable, stringValueTable, file, node);
-                    headerEnd = file.getFilePointer();
-                    file.seek(lastPosition);
-                }
+                nodeCache.get(node).getRight().add(file.getFilePointer());
+                file.write(new byte[4]);
             } else {
                 NodeUtil.writeNode(nodeCache, nodeNameTable, stringValueTable, file, node);
             }
         }
-        file.seek(headerEnd);
+        for (final Node node : values()) {
+            if ((node instanceof ArrayNode || node instanceof DictionaryNode) &&
+                    nodeCache.get(node).getLeft() == null) {
+                long offset = file.getFilePointer();
+                NodeUtil.writeNode(nodeCache, nodeNameTable, stringValueTable, file, node);
+                nodeCache.get(node).setLeft(offset);
+            }
+        }
     }
 
     @Override
@@ -116,9 +103,6 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
             size = 4 + (8 * size()) + values().stream()
                     .map(Node::getSize)
                     .reduce((a, b) -> a + b).orElse(0L);
-            if ((size % 4) != 0) {
-                size += 4 - (size % 4);
-            }
         }
         return size;
     }
@@ -133,7 +117,7 @@ public class DictionaryNode extends LinkedHashMap<String, Node> implements Node<
     }
 
     @Override
-    public boolean contains(Node node) {
-        return values().stream().anyMatch(n -> n.contains(node));
+    public boolean hasChild(Node node) {
+        return values().stream().anyMatch(n -> n.hasChild(node));
     }
 }

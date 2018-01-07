@@ -68,7 +68,6 @@ public class StringTableNode {
             endOfOffsets += bytes.length;
         }
         file.writeUnsignedInt(endOfOffsets);
-        NodeUtil.byteAlign(file, true);
         for (int i = 0; i < numEntries; i++) {
             file.write(StringUtil.stringToAscii(entries.get(i)));
         }

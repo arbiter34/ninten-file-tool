@@ -8,3 +8,4 @@ out/
 *.smubin
 *.byml
 *.sbyml
+release/

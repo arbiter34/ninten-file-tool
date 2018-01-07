@@ -12,7 +12,6 @@ import com.arbiter34.byml.nodes.StringNode;
 import com.arbiter34.byml.nodes.StringTableNode;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -21,7 +20,7 @@ public class NodeUtil {
 
     public static Node parseNode(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
                                  final BinaryAccessFile file, final short nodeType, final long value) throws IOException {
-        Long position = null;
+        Long position;
         Node node;
         switch (nodeType) {
             case ArrayNode.NODE_TYPE:

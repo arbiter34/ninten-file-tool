@@ -38,7 +38,7 @@ public interface Node<T> {
         return 0;
     }
 
-    default boolean contains(final Node node) {
+    default boolean hasChild(final Node node) {
         return false;
     }
 }
