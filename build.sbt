@@ -30,8 +30,13 @@ lazy val `prod-editor-lib` = project
   .settings(libraryDependencies ++= baseDependencies)
   .settings(baseSettings)
 
+lazy val `yaz0-lib` = project
+  .dependsOn(`file-util`)
+  .settings(name := "yaz0-lib")
+  .settings(baseSettings)
+
 lazy val `ninten-file-tool` = project
-  .dependsOn(`byml-editor-lib`, `prod-editor-lib`)
+  .dependsOn(`byml-editor-lib`, `prod-editor-lib`, `yaz0-lib`)
   .settings(name := "ninten-file-tool")
   .settings(mainClass in assembly := Some("Main"))
   .settings(baseSettings)

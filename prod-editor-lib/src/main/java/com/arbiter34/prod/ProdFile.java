@@ -44,18 +44,22 @@ public class ProdFile extends ArrayList<Mesh> {
 
     public static ProdFile parse(final String path) throws IOException {
         try (final BinaryAccessFile file = new BinaryAccessFile(path, "r")) {
-            final Header header = Header.parse(file);
-            final long currentPosition = file.getFilePointer();
-            file.seek(header.getStringTableOffset());
-            final StringNameTable stringNameTable = StringNameTable.parse(file);
-            file.seek(currentPosition);
-
-            final List<Mesh> meshes = new ArrayList<>();
-            for (int i = 0; i < header.getNumMeshes(); i++) {
-                meshes.add(Mesh.parse(file, stringNameTable));
-            }
-            return new ProdFile(header, stringNameTable, meshes);
+            return parse(file);
         }
+    }
+
+    public static ProdFile parse(final BinaryAccessFile file) throws IOException {
+        final Header header = Header.parse(file);
+        final long currentPosition = file.getFilePointer();
+        file.seek(header.getStringTableOffset());
+        final StringNameTable stringNameTable = StringNameTable.parse(file);
+        file.seek(currentPosition);
+
+        final List<Mesh> meshes = new ArrayList<>();
+        for (int i = 0; i < header.getNumMeshes(); i++) {
+            meshes.add(Mesh.parse(file, stringNameTable));
+        }
+        return new ProdFile(header, stringNameTable, meshes);
     }
 
     public void write(final String path) throws IOException {

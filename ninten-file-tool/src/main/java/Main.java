@@ -1,9 +1,13 @@
 import com.arbiter34.byml.BymlFile;
+import com.arbiter34.file.io.BinaryAccessFile;
 import com.arbiter34.prod.ProdFile;
+import com.arbiter34.yaz0.Yaz0Decoder;
+import com.arbiter34.yaz0.Yaz0Encoder;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Optional;
 import java.util.Scanner;
 
 public class Main {
@@ -16,29 +20,45 @@ public class Main {
         if (args.length != 4) {
             exitGracefully();
         }
+
+        try (final BinaryAccessFile file = new BinaryAccessFile("C-4_StaticDecoded.smubin", "r")) {
+            Yaz0Encoder.encode(file, "temp.compressed");
+        }
+        System.exit(0);
+
         final String operation = args[0];
         final String fileType = args[1];
         switch (operation) {
             case "d":
-                String parsedJson;
-                switch (fileType) {
-                    case "b":
-                        final BymlFile bymlFile = BymlFile.parse(args[2]);
-                        parsedJson = bymlFile.toJson();
-                        try (final PrintWriter out = new PrintWriter(args[3])) {
-                            out.write(parsedJson);
-                        }
-                        break;
-                    case "p":
-                        final ProdFile prodFile = ProdFile.parse(args[2]);
-                        parsedJson = prodFile.toJson();
-                        try (final PrintWriter out = new PrintWriter(args[3])) {
-                            out.write(parsedJson);
-                        }
-                        break;
-                    default:
-                        exitGracefully();
-                        break;
+                BinaryAccessFile decompressed = null;
+                try (final BinaryAccessFile file = new BinaryAccessFile(args[2], "r")) {
+                    if (file.readUnsignedInt() == Yaz0Decoder.MAGIC_BYTES) {
+                        decompressed = Yaz0Decoder.decode(file);
+                    }
+                    String parsedJson;
+                    switch (fileType) {
+                        case "b":
+                            final BymlFile bymlFile = BymlFile.parse(Optional.ofNullable(decompressed).orElse(file));
+                            parsedJson = bymlFile.toJson();
+                            try (final PrintWriter out = new PrintWriter(args[3])) {
+                                out.write(parsedJson);
+                            }
+                            break;
+                        case "p":
+                            final ProdFile prodFile = ProdFile.parse(Optional.ofNullable(decompressed).orElse(file));
+                            parsedJson = prodFile.toJson();
+                            try (final PrintWriter out = new PrintWriter(args[3])) {
+                                out.write(parsedJson);
+                            }
+                            break;
+                        default:
+                            exitGracefully();
+                            break;
+                    }
+                } finally {
+                    if (decompressed != null) {
+                        decompressed.close();
+                    }
                 }
                 break;
 
