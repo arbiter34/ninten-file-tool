@@ -2,14 +2,24 @@
 
 Quickly done (probably buggy) byml (v2 for botw) encoder/decoder
 
-#### Decode to JSON
+#### BYML to JSON
 ```
-java -jar byml-editor-1.0-SNAPSHOT.jar d file.byml file.json
+java -jar ninten-file-tool-0.5.jar d b file.byml file.json
 ```
 
-#### Encode to BYML
+#### JSON to BYML
 ```
- java -jar byml-editor-1.0-SNAPSHOT.jar c file.json file.byml
+ java -jar ninten-file-tool-0.5.jar c b file.json file.byml
+```
+
+#### PrOD to JSON
+```
+java -jar ninten-file-tool-0.5.jar d p file.blwp file.json
+```
+
+#### JSON to PrOD
+```
+ java -jar ninten-file-tool-0.5.jar c p file.json file.blwp
 ```
 
 #### Resources:
