@@ -21,8 +21,8 @@ public class Main {
             exitGracefully();
         }
 
-        try (final BinaryAccessFile file = new BinaryAccessFile("C-4_StaticDecoded.smubin", "r")) {
-            Yaz0Encoder.encode(file, "temp.compressed");
+        try (final BinaryAccessFile file = new BinaryAccessFile("temp.compressed", "r")) {
+            Yaz0Decoder.decode(file);
         }
         System.exit(0);
 
