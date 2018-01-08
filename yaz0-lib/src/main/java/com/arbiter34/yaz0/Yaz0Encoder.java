@@ -56,12 +56,29 @@ public class Yaz0Encoder {
                 continue;
             }
 
-            final int best = offsetBestPair.getRight();
-            if (best > 10) {
-                int x = best;
-            }
+            int best = offsetBestPair.getRight();
             final long offset = offsetBestPair.getLeft();
             // We found bytes -> seek input over matched bytes
+            in.seek(searchStart + best);
+            int size = best;
+            int count = 0;
+            while (size > 0) {
+                byte[] next = new byte[size];
+                count = 0;
+                while ((count * next.length) < MAX_SEARCH_SIZE) {
+                    in.read(next);
+
+                    if (Arrays.equals(Arrays.copyOfRange(searchBytes, best - size, best), next)) {
+                        count++;
+                    }
+                    break;
+                }
+                size--;
+            }
+            if (size > 1) {
+                size = size;
+            }
+            best += size * count;
             in.seek(searchStart + best);
             int backReference = (int)(out.getFilePointer() - offset + 2 - 1);
             headerPos++;    // 0 bit in header for reference byte
