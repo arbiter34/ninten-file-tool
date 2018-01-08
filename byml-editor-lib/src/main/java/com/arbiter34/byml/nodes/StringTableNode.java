@@ -1,8 +1,8 @@
 package com.arbiter34.byml.nodes;
 
-import com.arbiter34.byml.io.BinaryAccessFile;
-import com.arbiter34.byml.util.NodeUtil;
-import com.arbiter34.byml.util.StringUtil;
+import com.arbiter34.file.io.BinaryAccessFile;
+import com.arbiter34.file.util.StringUtil;
+import com.arbiter34.file.util.FileUtil;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -71,7 +71,7 @@ public class StringTableNode {
         for (int i = 0; i < numEntries; i++) {
             file.write(StringUtil.stringToAscii(entries.get(i)));
         }
-        NodeUtil.byteAlign(file, true);
+        FileUtil.byteAlign(file, true);
     }
 
     public List<String> getEntries() {

@@ -1,4 +1,4 @@
-package com.arbiter34.byml.io;
+package com.arbiter34.file.io;
 
 import java.io.EOFException;
 import java.io.File;

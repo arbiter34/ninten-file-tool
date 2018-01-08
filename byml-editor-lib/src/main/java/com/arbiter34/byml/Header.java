@@ -1,7 +1,6 @@
 package com.arbiter34.byml;
 
-import com.arbiter34.byml.io.BinaryAccessFile;
-import com.arbiter34.byml.nodes.Node;
+import com.arbiter34.file.io.BinaryAccessFile;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -11,8 +10,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.arbiter34.byml.BymlFile.MAGIC_BYTES;
+
 public class Header {
-    public static final int MAGIC_BYTES = 0x4259;
     private static final List<Integer> validVersions = Stream.of(0x01, 0x02)
                                                            .collect(Collectors.toList());
 

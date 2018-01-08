@@ -1,8 +1,9 @@
 package com.arbiter34.byml.nodes;
 
-import com.arbiter34.byml.io.BinaryAccessFile;
+import com.arbiter34.file.io.BinaryAccessFile;
 import com.arbiter34.byml.util.NodeUtil;
 import com.arbiter34.byml.util.Pair;
+import com.arbiter34.file.util.FileUtil;
 import com.fasterxml.jackson.annotation.JsonGetter;
 
 import java.io.IOException;
@@ -32,7 +33,7 @@ public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
         for (int i = 0; i < nodeTypes.length; i++) {
             nodeTypes[i] = file.readUnsignedByte();
         }
-        NodeUtil.byteAlign(file, false);
+        FileUtil.byteAlign(file, false);
         final ArrayNode instance = new ArrayNode();
         for (int i = 0; i < numEntries; i++) {
             final long value = file.readUnsignedInt();
@@ -54,7 +55,7 @@ public class ArrayNode extends ArrayList<Node> implements Node<List<Node>> {
             final short nodeType = NodeType.valueOfClazz(this.get(i).getClass()).getNodeType();
             file.writeByte(nodeType);
         }
-        NodeUtil.byteAlign(file, true);
+        FileUtil.byteAlign(file, true);
         for (final Node node : this) {
             if (node instanceof ArrayNode || node instanceof  DictionaryNode) {
                 nodeCache.get(node).getRight().add(file.getFilePointer());

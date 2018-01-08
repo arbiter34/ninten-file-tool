@@ -1,6 +1,6 @@
 package com.arbiter34.byml.util;
 
-import com.arbiter34.byml.io.BinaryAccessFile;
+import com.arbiter34.file.io.BinaryAccessFile;
 import com.arbiter34.byml.nodes.ArrayNode;
 import com.arbiter34.byml.nodes.BooleanNode;
 import com.arbiter34.byml.nodes.DictionaryNode;
@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 
 public class NodeUtil {
-    public static final int BYTE_ALIGNMENT = 4;
 
     public static Node parseNode(final StringTableNode nodeNameTable, final StringTableNode stringValueTable,
                                  final BinaryAccessFile file, final short nodeType, final long value) throws IOException {
@@ -60,7 +59,7 @@ public class NodeUtil {
         }
     }
 
-    public static void writeNode(final Map<Node, Pair<Long, List<Long>>> nodeCache, final StringTableNode nodeNameTable,
+    public static void writeNode(final Map<Node, com.arbiter34.byml.util.Pair<Long, List<Long>>> nodeCache, final StringTableNode nodeNameTable,
                                  final StringTableNode stringValueTable,
                                  final BinaryAccessFile file, final Node node) throws IOException {
         if (node instanceof ArrayNode) {
@@ -79,18 +78,6 @@ public class NodeUtil {
             StringNode.class.cast(node).write(file, stringValueTable);
         } else {
             throw new IOException(String.format("Found invalid node type: %s", node.getClass()));
-        }
-    }
-
-    public static void byteAlign(final BinaryAccessFile file, final boolean pad) throws IOException {
-        long position = file.getFilePointer();
-        if ((position % BYTE_ALIGNMENT) != 0) {
-            int fromAlignment = (int)(BYTE_ALIGNMENT - (position % BYTE_ALIGNMENT));
-            if (pad) {
-                file.write(new byte[fromAlignment]);
-            } else {
-                file.skipBytes(fromAlignment);
-            }
         }
     }
 

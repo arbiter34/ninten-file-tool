@@ -1,4 +1,4 @@
-package com.arbiter34.byml.util;
+package com.arbiter34.file.util;
 
 public class StringUtil {
 

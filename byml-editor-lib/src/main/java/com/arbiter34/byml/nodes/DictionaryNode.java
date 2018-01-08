@@ -1,6 +1,6 @@
 package com.arbiter34.byml.nodes;
 
-import com.arbiter34.byml.io.BinaryAccessFile;
+import com.arbiter34.file.io.BinaryAccessFile;
 import com.arbiter34.byml.util.NodeUtil;
 import com.arbiter34.byml.util.Pair;
 import com.fasterxml.jackson.annotation.JsonGetter;
