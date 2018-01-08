@@ -43,7 +43,6 @@ public class Yaz0Encoder {
             }
             int searchSize = MAX_SEARCH_SIZE;
             long searchStart = in.getFilePointer();
-            boolean found = false;
             byte[] searchBytes = new byte[searchSize];
             in.read(searchBytes);
             in.seek(in.getFilePointer() - searchSize);
@@ -61,6 +60,7 @@ public class Yaz0Encoder {
             // We found bytes -> seek input over matched bytes
             in.seek(searchStart + best);
             int size = best;
+            boolean found = false;
             int count = 0;
             while (size > 0) {
                 byte[] next = new byte[size];
@@ -68,9 +68,14 @@ public class Yaz0Encoder {
                 while ((count * next.length) < MAX_SEARCH_SIZE) {
                     in.read(next);
 
-                    if (Arrays.equals(Arrays.copyOfRange(searchBytes, best - size, best), next)) {
+                    if (Arrays.equals(Arrays.copyOfRange(searchBytes, searchBytes.length - size, searchBytes.length), next)) {
+                        found = true;
                         count++;
+                        continue;
                     }
+                    break;
+                }
+                if (found) {
                     break;
                 }
                 size--;
@@ -78,9 +83,9 @@ public class Yaz0Encoder {
             if (size > 1) {
                 size = size;
             }
+            int backReference = (int)(out.getFilePointer() - offset + 2 - 1);
             best += size * count;
             in.seek(searchStart + best);
-            int backReference = (int)(out.getFilePointer() - offset + 2 - 1);
             headerPos++;    // 0 bit in header for reference byte
             if (best < REQUIRES_THIRD_BYTE) {
                 int toWrite = ((searchSize - 0x02) << 12) | backReference;
@@ -102,19 +107,12 @@ public class Yaz0Encoder {
             return Pair.of(-1L, -1);
         }
 
-        byte[] buffer = new byte[searchBytes.length];
-        Pair<Long, Integer> longest = Pair.of(-1L, -1);
-        while (currentPosition - file.getFilePointer() < MAX_SEARCH_SIZE) {
-            long mark = file.getFilePointer();
-            file.read(buffer);
-            longest = longestSubarray(searchBytes, buffer);
-            if (longest.getLeft() != -1) {
-                byte[] found = Arrays.copyOf(searchBytes, longest.getRight());
-                long offset = currentPosition + longest.getLeft();
-                offsetCache.put(Arrays.hashCode(found), offset);
-                break;
-            }
-            file.seek(mark - searchBytes.length);
+        byte[] buffer = new byte[MAX_SEARCH_SIZE];
+        Pair<Long, Integer> longest = longestSubarray(searchBytes, buffer);
+        if (longest.getLeft() != -1) {
+            byte[] found = Arrays.copyOf(searchBytes, longest.getRight());
+            long offset = currentPosition + longest.getLeft();
+            offsetCache.put(Arrays.hashCode(found), offset);
         }
         file.seek(currentPosition);
         return longest;
