@@ -8,7 +8,7 @@ SET "replacestring="
 CALL SET "modifiedpath=%%filepath:%searchstring%=%replacestring%%%"
 :: Belt-and-braces
 SET "modifiedpath=%modifiedpath:\=/%"
-java -jar "%dir%/ninten-file-tool.jar" c p "%1" "%modifiedpath%"
+java -jar "%dir%/ninten-file-tool.jar" --encode --prod --compress --input "%1" --output "%modifiedpath%"
 SHIFT
 GOTO Loop
 :Done

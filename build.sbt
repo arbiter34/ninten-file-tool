@@ -1,7 +1,7 @@
 name := "ninten-file-tool"
 
 lazy val baseSettings = Seq(
-  version := "0.4",
+  version := "0.6",
   organization := "com.arbiter34",
   autoScalaLibrary := false,
   crossPaths := false,
@@ -39,4 +39,5 @@ lazy val `ninten-file-tool` = project
   .dependsOn(`byml-editor-lib`, `prod-editor-lib`, `yaz0-lib`)
   .settings(name := "ninten-file-tool")
   .settings(mainClass in assembly := Some("Main"))
+  .settings(libraryDependencies += "commons-cli" % "commons-cli" % "1.4")
   .settings(baseSettings)

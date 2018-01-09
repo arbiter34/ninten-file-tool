@@ -22,7 +22,7 @@ public class Yaz0Decoder {
 
         byte[] header = null;
         int headerPos = 0;
-        while (in.getFilePointer() < in.length() && out.length() < size) {
+        while (in.getFilePointer() < in.length() && out.getFilePointer() < size) {
             if (header == null || headerPos == 8) {
                 header = new byte[1];
                 in.read(header);

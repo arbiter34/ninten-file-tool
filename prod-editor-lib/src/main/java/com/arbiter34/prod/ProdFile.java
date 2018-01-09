@@ -63,24 +63,24 @@ public class ProdFile extends ArrayList<Mesh> {
     }
 
     public void write(final String path) throws IOException {
-        final BinaryAccessFile file = new BinaryAccessFile(path, "rw");
+            try (final BinaryAccessFile file = new BinaryAccessFile(path, "rw")) {
+                stringNameTable = new StringNameTable(stream().map(Mesh::getName)
+                        .collect(Collectors.toList()));
+                // Write meshes first
+                file.seek(0x20);
+                for (final Mesh mesh : this) {
+                    mesh.write(file, stringNameTable);
+                }
+                final long stringNameTableOffset = file.getFilePointer();
+                stringNameTable.write(file);
+                final long fileSize = file.getFilePointer();
 
-        stringNameTable = new StringNameTable(stream().map(Mesh::getName)
-                                                      .collect(Collectors.toList()));
-        // Write meshes first
-        file.seek(0x20);
-        for (final Mesh mesh : this) {
-            mesh.write(file, stringNameTable);
-        }
-        final long stringNameTableOffset = file.getFilePointer();
-        stringNameTable.write(file);
-        final long fileSize = file.getFilePointer();
+                header = new Header(header.getVersion(), header.getAlways1(), header.getUnknown(), fileSize,
+                        size(), stringNameTableOffset);
 
-        header = new Header(header.getVersion(), header.getAlways1(), header.getUnknown(), fileSize,
-                            size(), stringNameTableOffset);
-
-        file.seek(0);
-        header.write(file);
+                file.seek(0);
+                header.write(file);
+            }
     }
 
     public String toJson() throws JsonProcessingException {

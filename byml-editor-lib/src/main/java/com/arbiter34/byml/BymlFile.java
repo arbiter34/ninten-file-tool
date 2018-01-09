@@ -101,32 +101,32 @@ public class BymlFile {
    }
 
     public void write(final String path) throws IOException {
-        final BinaryAccessFile file = new BinaryAccessFile(path, "rw");
+        try (final BinaryAccessFile file = new BinaryAccessFile(path, "rw")) {
+            // We need to calc some offsets before writing the header
+            final long headerSize = header.getSize();
+            final long nodeNameTableOffset = headerSize;
 
-        // We need to calc some offsets before writing the header
-        final long headerSize = header.getSize();
-        final long nodeNameTableOffset = headerSize;
+            // Build new NodeNameTable and StringValueTable
+            nodeNameTable = new StringTableNode(buildNodeNameTable(new ArrayList<>(), root).stream().sorted().collect(Collectors.toList()));
+            stringNameTable = new StringTableNode(buildStringValueTable(new ArrayList<>(), root).stream().sorted().collect(Collectors.toList()));
 
-        // Build new NodeNameTable and StringValueTable
-        nodeNameTable = new StringTableNode(buildNodeNameTable(new ArrayList<>(), root).stream().sorted().collect(Collectors.toList()));
-        stringNameTable = new StringTableNode(buildStringValueTable(new ArrayList<>(), root).stream().sorted().collect(Collectors.toList()));
+            file.seek(nodeNameTableOffset);
+            nodeNameTable.write(file);
 
-        file.seek(nodeNameTableOffset);
-        nodeNameTable.write(file);
+            final long stringNameTableOffset = file.getFilePointer();
+            stringNameTable.write(file);
 
-        final long stringNameTableOffset = file.getFilePointer();
-        stringNameTable.write(file);
+            final long rootNodeOffset = file.getFilePointer();
+            header = new Header(MAGIC_BYTES, header.getVersion(), nodeNameTableOffset, stringNameTableOffset, 0, rootNodeOffset);
+            file.seek(0);
+            header.write(file);
 
-        final long rootNodeOffset = file.getFilePointer();
-        header = new Header(MAGIC_BYTES, header.getVersion(), nodeNameTableOffset, stringNameTableOffset, 0, rootNodeOffset);
-        file.seek(0);
-        header.write(file);
+            file.seek(rootNodeOffset);
 
-        file.seek(rootNodeOffset);
-
-        final Map<Node, Pair<Long, List<Long>>> nodeCache = buildNodeCache(root, new LinkedHashMap<>());
-        NodeUtil.writeNode(nodeCache, nodeNameTable, stringNameTable, file, root);
-        writeNodeCacheOffsets(file, nodeCache);
+            final Map<Node, Pair<Long, List<Long>>> nodeCache = buildNodeCache(root, new LinkedHashMap<>());
+            NodeUtil.writeNode(nodeCache, nodeNameTable, stringNameTable, file, root);
+            writeNodeCacheOffsets(file, nodeCache);
+        }
     }
 
     public String toJson() throws JsonProcessingException {

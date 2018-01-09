@@ -8,12 +8,20 @@ import java.io.RandomAccessFile;
 
 public class BinaryAccessFile  extends RandomAccessFile {
 
+    private final String path;
+
     public BinaryAccessFile(String name, String mode) throws FileNotFoundException {
         super(name, mode);
+        path = name;
     }
 
     public BinaryAccessFile(File file, String mode) throws FileNotFoundException {
         super(file, mode);
+        path = file.getPath();
+    }
+
+    public String getPath() {
+        return path;
     }
 
     public void writeUnsignedInt(long v) throws IOException {
