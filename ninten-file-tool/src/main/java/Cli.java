@@ -31,7 +31,7 @@ public class Cli {
         options.addOption("c", "compress", false, "Compress after encoding");
 
         final OptionGroup optionGroup = new OptionGroup();
-        optionGroup.setRequired(true);
+        optionGroup.setRequired(false);
         optionGroup.addOption(Option.builder("b")
                                     .longOpt("byml")
                                     .desc("BYML File Format (smubin|baniminfo|sbyml|others?)")
@@ -50,6 +50,7 @@ public class Cli {
     }
 
     public void parse(final String[] args) {
+
         CommandLineParser parser = new BasicParser();
 
         try {
@@ -65,6 +66,10 @@ public class Cli {
             final String format = cmd.hasOption("byml") ? "b" : "p";
 
             if (cmd.hasOption("encode")) {
+                if (!(cmd.hasOption("byml") || cmd.hasOption("prod"))) {
+                    System.out.println("Must specify file type for encoding.");
+                    help();
+                }
                 encode(input, output, format, compress);
             } else if (cmd.hasOption("decode")) {
                 decode(input, output, format);
@@ -107,31 +112,30 @@ public class Cli {
     private void decode(final String input, String output, final String format) throws IOException {
         BinaryAccessFile decompressed = null;
         try (final BinaryAccessFile file = new BinaryAccessFile(input, "r")) {
-            if (file.readUnsignedInt() == Yaz0Decoder.MAGIC_BYTES) {
+            long magicBytes = file.readUnsignedInt();
+            if (magicBytes == Yaz0Decoder.MAGIC_BYTES) {
                 file.seek(0);
                 decompressed = Yaz0Decoder.decode(file);
+                magicBytes = decompressed.readUnsignedInt();
                 output = output.replaceAll("^(.*)\\.s(.*)$", "$1.$2");
             }
-            file.seek(0);
+            decompressed.seek(0);
             String parsedJson;
-            switch (format) {
-                case "b":
-                    final BymlFile bymlFile = BymlFile.parse(Optional.ofNullable(decompressed).orElse(file));
-                    parsedJson = bymlFile.toJson();
-                    try (final PrintWriter out = new PrintWriter(output)) {
-                        out.write(parsedJson);
-                    }
-                    break;
-                case "p":
-                    final ProdFile prodFile = ProdFile.parse(Optional.ofNullable(decompressed).orElse(file));
-                    parsedJson = prodFile.toJson();
-                    try (final PrintWriter out = new PrintWriter(output)) {
-                        out.write(parsedJson);
-                    }
-                    break;
-                default:
-                    help();
-                    break;
+            if ((int)(magicBytes >>> 16) == BymlFile.MAGIC_BYTES) {
+                final BymlFile bymlFile = BymlFile.parse(Optional.ofNullable(decompressed).orElse(file));
+                parsedJson = bymlFile.toJson();
+                try (final PrintWriter out = new PrintWriter(output)) {
+                    out.write(parsedJson);
+                }
+            } else if (magicBytes == ProdFile.MAGIC_BYTES) {
+                final ProdFile prodFile = ProdFile.parse(Optional.ofNullable(decompressed).orElse(file));
+                parsedJson = prodFile.toJson();
+                try (final PrintWriter out = new PrintWriter(output)) {
+                    out.write(parsedJson);
+                }
+            } else {
+                System.out.println("Unable to detect file format for decoding.");
+                help();
             }
         } finally {
             if (decompressed != null) {
