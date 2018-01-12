@@ -42,19 +42,18 @@ public class BymlFile {
     @JsonIgnore
     private StringTableNode stringNameTable;
 
-    @JsonProperty("pathTable")
+    @JsonIgnore
     private final PathTableNode pathTable;
 
     @JsonCreator
     public BymlFile(@JsonProperty("header") Header header, @JsonProperty("root") Node root,
                     @JsonProperty("nodeNameTable") StringTableNode nodeNameTable,
-                    @JsonProperty("stringNameTable") StringTableNode stringNameTable,
-                    @JsonProperty("pathTable") PathTableNode pathTable) {
+                    @JsonProperty("stringNameTable") StringTableNode stringNameTable) {
         this.header = header;
         this.root = root;
         this.nodeNameTable = nodeNameTable;
         this.stringNameTable = stringNameTable;
-        this.pathTable = pathTable;
+        this.pathTable = null;
     }
 
    public Node getRoot() {
@@ -97,7 +96,7 @@ public class BymlFile {
        }
        file.seek(header.getRootNodeOffset());
        final Node root = NodeUtil.parseNode(nodeNameTable, stringNameTable, file, nodeType, 0l);
-       return new BymlFile(header, root, nodeNameTable, stringNameTable, pathTable);
+       return new BymlFile(header, root, nodeNameTable, stringNameTable);
    }
 
     public void write(final String path) throws IOException {
@@ -213,6 +212,10 @@ public class BymlFile {
     }
 
     public static BymlFile fromJson(final String json) throws IOException {
+        return objectMapper.readValue(json, BymlFile.class);
+    }
+
+    public static BymlFile fromJson(final byte[] json) throws IOException {
         return objectMapper.readValue(json, BymlFile.class);
     }
 }

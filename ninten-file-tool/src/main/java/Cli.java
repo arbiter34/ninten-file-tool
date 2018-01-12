@@ -10,10 +10,14 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.Scanner;
 
@@ -49,7 +53,7 @@ public class Cli {
 
     }
 
-    public void parse(final String[] args) {
+    public void parse(final String[] args) throws IOException {
 
         CommandLineParser parser = new BasicParser();
 
@@ -62,87 +66,98 @@ public class Cli {
 
             final boolean compress = cmd.hasOption("compress");
             final String input = Optional.ofNullable(cmd.getOptionValue("input")).orElseThrow(RuntimeException::new);
-            final String output = Optional.ofNullable(cmd.getOptionValue("output")).orElseThrow(RuntimeException::new);
-            final String format = cmd.hasOption("byml") ? "b" : "p";
 
-            if (cmd.hasOption("encode")) {
-                if (!(cmd.hasOption("byml") || cmd.hasOption("prod"))) {
-                    System.out.println("Must specify file type for encoding.");
+            BinaryAccessFile decompressed = null;
+            try (final BinaryAccessFile file = new BinaryAccessFile(input, "r")) {
+                long magicBytes = file.readUnsignedInt();
+                file.seek(0);
+
+                if (magicBytes == Yaz0Decoder.MAGIC_BYTES) {
+                    file.seek(0);
+                    decompressed = Yaz0Decoder.decode(file);
+                    magicBytes = decompressed.readUnsignedInt();
+                    decompressed.seek(0);
+                }
+                String parsedJson;
+                if ((int)(magicBytes >>> 16) == BymlFile.MAGIC_BYTES) {
+                    final BymlFile bymlFile = BymlFile.parse(Optional.ofNullable(decompressed).orElse(file));
+                    parsedJson = bymlFile.toJson();
+                    try (final PrintWriter out = new PrintWriter(input + ".json")) {
+                        out.write(parsedJson);
+                    }
+                } else if (magicBytes == ProdFile.MAGIC_BYTES) {
+                    final ProdFile prodFile = ProdFile.parse(Optional.ofNullable(decompressed).orElse(file));
+                    parsedJson = prodFile.toJson();
+                    try (final PrintWriter out = new PrintWriter(input + ".json")) {
+                        out.write(parsedJson);
+                    }
+                } else if ((int)(magicBytes >>> 16) == 0x7B0D){
+                    // Jackson always start's objects with 7B (open curly) and 0D (\r)
+                    final byte[] jsonBytes;
+                    try (BinaryAccessFile jsonFile = new BinaryAccessFile(input, "r")) {
+                        jsonBytes = new byte[(int)jsonFile.length()];
+                        file.read(jsonBytes);
+                    }
+                    String output = input.replaceAll("^(.*)\\.json$", "$1");
+                    if (compress) {
+                        output = output + "Decompressed";
+                    }
+
+                    // Try and parse each file type
+                    boolean parsed = false;
+                    try {
+                        BymlFile bymlFile = BymlFile.fromJson(jsonBytes);
+                        bymlFile.write(output);
+                        parsed = true;
+                    } catch (Throwable t) {
+                        // Guess it wasn't byml
+                    }
+
+                    if (!parsed) {
+                        try {
+                            ProdFile prodFile = ProdFile.fromJson(jsonBytes);
+                            prodFile.write(output);
+                            parsed = true;
+                        } catch (Throwable t) {
+                            t.printStackTrace();
+                            // Not PrOD
+                        }
+                    }
+
+                    if (parsed) {
+                        if (compress) {
+                            compress(output);
+                        }
+                        return;
+                    }
+
+                    System.out.println("Unable to detect file format for decoding.");
                     help();
                 }
-                encode(input, output, format, compress);
-            } else if (cmd.hasOption("decode")) {
-                decode(input, output, format);
-            } else {
-                help();
+            } catch (Throwable t) {
+                t.printStackTrace();
+            } finally {
+                if (decompressed != null) {
+                    decompressed.close();
+                    new File(decompressed.getPath()).delete();
+                }
             }
 
-        } catch (Throwable t) {
-            t.printStackTrace();
+        } catch (ParseException e) {
+            e.printStackTrace();
         }
     }
 
-    private void encode(final String input, String output, final String format, final boolean compress) throws IOException {
-        final String json = new Scanner(new File(input)).useDelimiter("\\Z").next();
-        switch (format) {
-            case "b":
-                final BymlFile jsonBymlFile = BymlFile.fromJson(json);
-                jsonBymlFile.write(output);
-                break;
-            case "p":
-                final ProdFile jsonProdfile = ProdFile.fromJson(json);
-                jsonProdfile.write(output);
-                break;
-            default:
-                help();
-                break;
-        }
-        if (compress) {
+    private void compress(final String output) throws IOException {
             try (final BinaryAccessFile decompressed = new BinaryAccessFile(output, "r")) {
-                String compressedOutput =  output.replaceAll("^(.*)\\.(.*)$", "$1.s$2");
+                String compressedOutput =  output.replaceAll("^(.*)Decompressed$", "$1");
                 if (output.equals(compressedOutput)) {
                     compressedOutput = "Compressed" + compressedOutput;
                 }
                 Yaz0Encoder.encode(decompressed, compressedOutput);
+            } finally {
+                new File(output).delete();
             }
-            new File(output).delete();
-        }
-    }
-
-    private void decode(final String input, String output, final String format) throws IOException {
-        BinaryAccessFile decompressed = null;
-        try (final BinaryAccessFile file = new BinaryAccessFile(input, "r")) {
-            long magicBytes = file.readUnsignedInt();
-            if (magicBytes == Yaz0Decoder.MAGIC_BYTES) {
-                file.seek(0);
-                decompressed = Yaz0Decoder.decode(file);
-                magicBytes = decompressed.readUnsignedInt();
-                output = output.replaceAll("^(.*)\\.s(.*)$", "$1.$2");
-            }
-            decompressed.seek(0);
-            String parsedJson;
-            if ((int)(magicBytes >>> 16) == BymlFile.MAGIC_BYTES) {
-                final BymlFile bymlFile = BymlFile.parse(Optional.ofNullable(decompressed).orElse(file));
-                parsedJson = bymlFile.toJson();
-                try (final PrintWriter out = new PrintWriter(output)) {
-                    out.write(parsedJson);
-                }
-            } else if (magicBytes == ProdFile.MAGIC_BYTES) {
-                final ProdFile prodFile = ProdFile.parse(Optional.ofNullable(decompressed).orElse(file));
-                parsedJson = prodFile.toJson();
-                try (final PrintWriter out = new PrintWriter(output)) {
-                    out.write(parsedJson);
-                }
-            } else {
-                System.out.println("Unable to detect file format for decoding.");
-                help();
-            }
-        } finally {
-            if (decompressed != null) {
-                decompressed.close();
-                new File(decompressed.getPath()).delete();
-            }
-        }
     }
 
     private void help() {

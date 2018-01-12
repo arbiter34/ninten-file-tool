@@ -91,6 +91,10 @@ public class ProdFile extends ArrayList<Mesh> {
         return objectMapper.readValue(json, ProdFile.class);
     }
 
+    public static ProdFile fromJson(final byte[] json) throws IOException {
+        return objectMapper.readValue(json, ProdFile.class);
+    }
+
     public Header getHeader() {
         return header;
     }
