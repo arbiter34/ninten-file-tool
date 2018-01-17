@@ -91,7 +91,7 @@ public class Cli {
                     try (final PrintWriter out = new PrintWriter(input + ".json")) {
                         out.write(parsedJson);
                     }
-                } else if ((int)(magicBytes >>> 16) == 0x7B0D){
+                } else if ((int)(magicBytes >>> 24) == 0x7B){
                     // Jackson always start's objects with 7B (open curly) and 0D (\r)
                     final byte[] jsonBytes;
                     try (BinaryAccessFile jsonFile = new BinaryAccessFile(input, "r")) {

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,33 +45,56 @@ public class StringTableNode {
             if (bytesRead != length) {
                 throw new IOException(String.format("Found invalid number of bytes to read. Expected: %s Found", length, bytesRead));
             }
-            entries.add(new String(buffer, 0, length -1, Charset.defaultCharset()));
+            entries.add(new String(buffer, 0, length -1, StandardCharsets.UTF_8));
         }
 
         return new StringTableNode(entries);
     }
 
     public void write(final BinaryAccessFile file) throws IOException {
+        long startOfStringTable = file.getFilePointer();
         final int numEntries = entries.size();
+
+        // Build and write header
         byte[] bytes = new byte[4];
         bytes[0] = (byte)NODE_TYPE;
         bytes[1] = (byte)(numEntries >>> 16);
         bytes[2] = (byte)(numEntries >>> 8);
         bytes[3] = (byte)(numEntries);
         file.write(bytes);
-        long endOfOffsets = 0x04 + (4 * numEntries) + 0x04; // type/numEntries + 4bytes/offset
+        final List<Long> offsets = new ArrayList<>();
+
+        // Mark start and end of offsets
+        long startOfOffsets = file.getFilePointer();
+        long endOfOffsets = startOfOffsets + (4 * numEntries) + 0x04; // type/numEntries + 4bytes/offset + end of last string offset
+
+        // 4 byte align end of offsets
         if ((endOfOffsets % 4) != 0) {
             endOfOffsets += 4 - (endOfOffsets % 4);
         }
+
+        // Seek to string start
+        file.seek(endOfOffsets);
         for (int i = 0; i < numEntries; i++) {
-            file.writeUnsignedInt(endOfOffsets);
-            bytes = StringUtil.stringToAscii(entries.get(i));
-            endOfOffsets += bytes.length;
+            // Add offset of string start, then write string as utf-8 bytes null terminated
+            offsets.add(file.getFilePointer() - startOfStringTable);
+            file.write(entries.get(i).getBytes(StandardCharsets.UTF_8));
+            file.write((byte)0);
         }
-        file.writeUnsignedInt(endOfOffsets);
-        for (int i = 0; i < numEntries; i++) {
-            file.write(StringUtil.stringToAscii(entries.get(i)));
+        // Add offset to end of last string
+        offsets.add(file.getFilePointer() - startOfStringTable);
+
+        // Mark end of table for prologue
+        final long endOfStringTable = file.getFilePointer();
+
+        // Seek and write all offsets
+        file.seek(startOfOffsets);
+        for (final Long offset : offsets) {
+            file.writeUnsignedInt(offset);
         }
+
+        // Prologue - seek to end and 4-byte align
+        file.seek(endOfStringTable);
         FileUtil.byteAlign(file, true);
     }
 
